@@ -1,0 +1,508 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CyberCode Adventure - Level 1-10 (Duel with Score)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --p1-color: #00f2ff;
+            --p2-color: #ff00e5;
+            --bg-dark: #0a0c14;
+        }
+
+        body {
+            background-color: var(--bg-dark);
+            color: #fff;
+            font-family: 'JetBrains Mono', monospace;
+            overflow-x: hidden;
+        }
+
+        .cyber-font { font-family: 'Orbitron', sans-serif; }
+
+        .neon-border-p1 {
+            border: 3px solid var(--p1-color);
+            box-shadow: 0 0 15px rgba(0, 242, 255, 0.3);
+        }
+
+        .neon-border-p2 {
+            border: 3px solid var(--p2-color);
+            box-shadow: 0 0 15px rgba(255, 0, 229, 0.3);
+        }
+
+        .grid-cell {
+            aspect-ratio: 1/1;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            position: relative;
+            background: rgba(15, 23, 42, 0.6);
+        }
+
+        .firewall-label {
+            background: rgba(220, 38, 38, 0.2);
+            border: 1px solid #ef4444;
+            color: #ef4444;
+            font-size: 7px;
+            font-weight: 900;
+            padding: 1px;
+            text-align: center;
+            line-height: 1;
+        }
+
+        .robot {
+            width: 85%;
+            height: 85%;
+            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            z-index: 20;
+        }
+
+        .btn-p1 { background-color: var(--p1-color); color: #000; }
+        .btn-p2 { background-color: var(--p2-color); color: #000; }
+
+        .goal-node {
+            background: rgba(34, 197, 94, 0.2);
+            border: 2px solid #22c55e;
+            color: #22c55e;
+            font-size: 9px;
+            font-weight: bold;
+        }
+
+        .command-slot {
+            width: 36px;
+            height: 36px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 4px;
+            font-weight: bold;
+        }
+
+        .level-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: #1e293b;
+            transition: all 0.3s;
+            cursor: pointer;
+        }
+        .level-dot.active {
+            background: var(--p1-color);
+            box-shadow: 0 0 10px var(--p1-color);
+        }
+        .level-dot.completed {
+            background: #22c55e;
+        }
+
+        .score-board {
+            background: rgba(0, 0, 0, 0.5);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 4px 12px;
+            border-radius: 4px;
+        }
+
+        .credit-text {
+            position: absolute;
+            bottom: 2rem;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 0.65rem;
+            letter-spacing: 0.3em;
+            color: rgba(255, 255, 255, 0.4);
+            text-transform: uppercase;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Overlay Menu -->
+    <div id="menu-screen" class="fixed inset-0 z-50 flex flex-col items-center justify-center p-6 text-center bg-slate-950">
+        <div class="mb-12">
+            <h1 class="cyber-font text-5xl md:text-7xl font-black italic tracking-tighter text-white mb-2">
+                CYBER<span class="text-cyan-400">CODE</span>
+            </h1>
+            <p class="tracking-[0.5em] text-cyan-500/80 font-bold uppercase">Mission Protocol 1.0</p>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-8 w-full max-w-4xl">
+            <button onclick="startGame('SINGLE')" class="group relative bg-slate-900 border-b-8 border-cyan-500 p-8 rounded-2xl hover:-translate-y-2 transition-all">
+                <h2 class="cyber-font text-3xl font-black text-white group-hover:text-cyan-400">MISI SOLO</h2>
+                <p class="text-slate-400 mt-2">Selesaikan Level 1-10</p>
+            </button>
+            <button onclick="startGame('DUEL')" class="group relative bg-slate-900 border-b-8 border-fuchsia-500 p-8 rounded-2xl hover:-translate-y-2 transition-all">
+                <h2 class="cyber-font text-3xl font-black text-white group-hover:text-fuchsia-400">DUEL KODE</h2>
+                <p class="text-slate-400 mt-2">Kumpulkan Skor Tertinggi</p>
+            </button>
+        </div>
+
+        <!-- Credit Footer -->
+        <div class="credit-text cyber-font">
+            design by <span class="text-cyan-400 font-bold">Lily Hendria 88</span>
+        </div>
+    </div>
+
+    <!-- Game Interface -->
+    <div id="game-screen" class="hidden min-h-screen p-4 md:p-6 flex flex-col items-center">
+        <!-- HUD Header -->
+        <div class="w-full max-w-6xl flex flex-wrap justify-between items-center gap-4 mb-6 bg-slate-900/50 p-4 rounded-xl border border-white/10 backdrop-blur-md">
+            <div class="flex items-center space-x-4">
+                <button onclick="location.reload()" class="cyber-font px-3 py-1 border border-red-500 text-red-500 hover:bg-red-500/20 rounded text-xs">MENU</button>
+                <div class="flex space-x-1" id="level-dots"></div>
+            </div>
+            
+            <div class="text-center">
+                <h2 id="level-display" class="cyber-font text-xl font-black italic tracking-widest text-cyan-400">LEVEL 01</h2>
+            </div>
+
+            <div class="flex items-center space-x-4">
+                <div id="mode-badge" class="cyber-font px-3 py-1 border border-cyan-400 text-cyan-400 rounded text-xs">SOLO</div>
+            </div>
+        </div>
+
+        <div id="game-container" class="grid grid-cols-1 gap-8 w-full max-w-6xl">
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <!-- Player 1 Column -->
+                <div id="p1-area" class="flex flex-col">
+                    <div class="bg-cyan-500 p-1.5 flex justify-between items-center rounded-t-lg">
+                        <span class="cyber-font font-black italic text-[10px] text-slate-950 uppercase">Player 1 Node</span>
+                        <div class="score-board cyber-font text-xs font-bold text-white">
+                            SCORE: <span id="p1-score-display" class="text-cyan-300">0</span>
+                        </div>
+                    </div>
+                    <div id="p1-grid-container" class="neon-border-p1 p-1 bg-slate-950">
+                        <div id="p1-grid" class="grid gap-0.5 bg-slate-900"></div>
+                    </div>
+                    <div id="p1-status" class="h-6 py-1 text-[8px] font-bold text-cyan-400 tracking-[0.2em] uppercase">IDLE_WAITING_COMMAND</div>
+                    
+                    <div class="bg-slate-900/80 p-3 rounded-b-xl border-x border-b border-slate-800">
+                        <div id="p1-commands" class="flex flex-wrap gap-1 mb-3 min-h-[40px] p-2 bg-black/40 rounded border border-white/5"></div>
+                        <div class="grid grid-cols-4 gap-2 mb-4">
+                            <button onclick="addCommand(1, 'UP')" class="btn-p1 p-2 rounded font-bold hover:brightness-110">↑</button>
+                            <button onclick="addCommand(1, 'DOWN')" class="btn-p1 p-2 rounded font-bold hover:brightness-110">↓</button>
+                            <button onclick="addCommand(1, 'LEFT')" class="btn-p1 p-2 rounded font-bold hover:brightness-110">←</button>
+                            <button onclick="addCommand(1, 'RIGHT')" class="btn-p1 p-2 rounded font-bold hover:brightness-110">→</button>
+                        </div>
+                        <div class="flex gap-2">
+                            <button onclick="resetCommands(1)" class="w-1/4 p-3 bg-slate-800 text-white rounded hover:bg-slate-700 transition-all">RESET</button>
+                            <button id="run-btn-1" onclick="runPlayerAlgorithm(1)" class="w-3/4 cyber-font py-3 bg-cyan-400 text-slate-950 font-black italic rounded shadow-[0_0_15px_rgba(34,211,238,0.3)] hover:scale-[1.02] active:scale-95 transition-all uppercase">
+                                Run Sequence
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Player 2 Column -->
+                <div id="p2-area" class="hidden flex flex-col">
+                    <div class="bg-fuchsia-500 p-1.5 flex justify-between items-center rounded-t-lg">
+                        <span class="cyber-font font-black italic text-[10px] text-slate-950 uppercase">Player 2 Node</span>
+                        <div class="score-board cyber-font text-xs font-bold text-white">
+                            SCORE: <span id="p2-score-display" class="text-fuchsia-300">0</span>
+                        </div>
+                    </div>
+                    <div id="p2-grid-container" class="neon-border-p2 p-1 bg-slate-950">
+                        <div id="p2-grid" class="grid gap-0.5 bg-slate-900"></div>
+                    </div>
+                    <div id="p2-status" class="h-6 py-1 text-[8px] font-bold text-fuchsia-400 tracking-[0.2em] uppercase">IDLE_WAITING_COMMAND</div>
+                    
+                    <div class="bg-slate-900/80 p-3 rounded-b-xl border-x border-b border-slate-800">
+                        <div id="p2-commands" class="flex flex-wrap gap-1 mb-3 min-h-[40px] p-2 bg-black/40 rounded border border-white/5"></div>
+                        <div class="grid grid-cols-4 gap-2 mb-4">
+                            <button onclick="addCommand(2, 'UP')" class="btn-p2 p-2 rounded font-bold hover:brightness-110">↑</button>
+                            <button onclick="addCommand(2, 'DOWN')" class="btn-p2 p-2 rounded font-bold hover:brightness-110">↓</button>
+                            <button onclick="addCommand(2, 'LEFT')" class="btn-p2 p-2 rounded font-bold hover:brightness-110">←</button>
+                            <button onclick="addCommand(2, 'RIGHT')" class="btn-p2 p-2 rounded font-bold hover:brightness-110">→</button>
+                        </div>
+                        <div class="flex gap-2">
+                            <button onclick="resetCommands(2)" class="w-1/4 p-3 bg-slate-800 text-white rounded hover:bg-slate-700 transition-all">RESET</button>
+                            <button id="run-btn-2" onclick="runPlayerAlgorithm(2)" class="w-3/4 cyber-font py-3 bg-fuchsia-500 text-slate-950 font-black italic rounded shadow-[0_0_15px_rgba(217,70,239,0.3)] hover:scale-[1.02] active:scale-95 transition-all uppercase">
+                                Run Sequence
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Central Control -->
+            <div class="flex justify-center mt-4 pb-12">
+                <button id="next-btn" onclick="nextLevel()" class="hidden cyber-font px-12 py-4 border-2 border-green-500 bg-green-500/10 rounded-lg text-green-500 hover:bg-green-500/30 transition-all font-black italic">
+                    KONFIRMASI: LEVEL BERIKUTNYA →
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const LEVELS = [
+            { id: 1, name: "START_UP", size: 5, start: {x:0,y:0}, goal: {x:2,y:2}, obs: [] },
+            { id: 2, name: "BARRIER_X", size: 5, start: {x:0,y:0}, goal: {x:4,y:4}, obs: [{x:2,y:1},{x:2,y:2},{x:2,y:3}] },
+            { id: 3, name: "ZIG_ZAG", size: 6, start: {x:0,y:5}, goal: {x:5,y:0}, obs: [{x:1,y:1},{x:2,y:2},{x:3,y:3},{x:4,y:4}] },
+            { id: 4, name: "WALL_STREET", size: 6, start: {x:0,y:0}, goal: {x:5,y:5}, obs: [{x:3,y:0},{x:3,y:1},{x:3,y:2},{x:3,y:4},{x:3,y:5}] },
+            { id: 5, name: "CHAMBER_05", size: 7, start: {x:3,y:3}, goal: {x:6,y:6}, obs: [{x:4,y:2},{x:4,y:3},{x:4,y:4},{x:2,y:4},{x:3,y:4}] },
+            { id: 6, name: "CORRIDOR", size: 8, start: {x:0,y:0}, goal: {x:7,y:0}, obs: [{x:1,y:0},{x:1,y:1},{x:3,y:7},{x:3,y:6},{x:3,y:5},{x:3,y:4},{x:3,y:3},{x:3,y:2}] },
+            { id: 7, name: "MAZE_RUNNER", size: 8, start: {x:0,y:7}, goal: {x:7,y:0}, obs: [{x:1,y:7},{x:1,y:6},{x:1,y:5},{x:3,y:0},{x:3,y:1},{x:3,y:2},{x:3,y:3},{x:3,y:4},{x:5,y:7},{x:5,y:6},{x:5,y:5},{x:5,y:4}] },
+            { id: 8, name: "DATA_CORE", size: 9, start: {x:0,y:4}, goal: {x:8,y:4}, obs: [{x:4,y:0},{x:4,y:1},{x:4,y:2},{x:4,y:3},{x:4,y:5},{x:4,y:6},{x:4,y:7},{x:4,y:8}] },
+            { id: 9, name: "SYSTEM_LOCK", size: 9, start: {x:0,y:0}, goal: {x:8,y:8}, obs: [{x:1,y:1},{x:2,y:1},{x:3,y:1},{x:5,y:5},{x:6,y:5},{x:7,y:5},{x:1,y:7},{x:2,y:7},{x:3,y:7}] },
+            { id: 10, name: "FINAL_HACK", size: 10, start: {x:0,y:0}, goal: {x:9,y:9}, obs: [{x:5,y:5},{x:4,y:5},{x:6,y:5},{x:5,y:4},{x:5,y:6},{x:2,y:2},{x:2,y:3},{x:2,y:1},{x:7,y:7},{x:7,y:8},{x:7,y:6}] }
+        ];
+
+        let mode = 'SINGLE';
+        let currentLevelIdx = 0;
+        let p1Pos = { x:0, y:0 };
+        let p2Pos = { x:0, y:0 };
+        let p1Commands = [];
+        let p2Commands = [];
+        let p1Executing = false;
+        let p2Executing = false;
+        let completedLevels = [];
+        
+        // Skor Pemain
+        let p1Score = 0;
+        let p2Score = 0;
+        let levelWinners = {}; // Melacak siapa yang menang di level mana untuk mencegah skor berulang
+
+        function startGame(selectedMode) {
+            mode = selectedMode;
+            document.getElementById('menu-screen').classList.add('hidden');
+            document.getElementById('game-screen').classList.remove('hidden');
+            
+            const badge = document.getElementById('mode-badge');
+            badge.innerText = mode === 'DUEL' ? 'DUEL_MODE' : 'SOLO_MODE';
+            badge.className = mode === 'DUEL' ? 'cyber-font px-3 py-1 border border-fuchsia-500 text-fuchsia-500 rounded text-xs' : 'cyber-font px-3 py-1 border border-cyan-400 text-cyan-400 rounded text-xs';
+
+            const container = document.getElementById('game-container');
+            if (mode === 'DUEL') {
+                document.getElementById('p2-area').classList.remove('hidden');
+                container.style.maxWidth = '1152px'; // max-w-6xl
+            } else {
+                document.getElementById('p2-area').classList.add('hidden');
+                container.style.maxWidth = '500px'; 
+            }
+            loadLevel(0);
+        }
+
+        function loadLevel(idx) {
+            currentLevelIdx = idx;
+            const level = LEVELS[idx];
+            p1Pos = { ...level.start };
+            p2Pos = { ...level.start };
+            p1Commands = [];
+            p2Commands = [];
+            p1Executing = false;
+            p2Executing = false;
+            
+            document.getElementById('level-display').innerText = `LEVEL ${String(level.id).padStart(2, '0')}: ${level.name}`;
+            document.getElementById('next-btn').classList.add('hidden');
+            
+            updateLevelDots();
+            initGrids();
+            updateCommandUI(1);
+            updateCommandUI(2);
+            resetStatus(1);
+            resetStatus(2);
+        }
+
+        function updateLevelDots() {
+            const container = document.getElementById('level-dots');
+            container.innerHTML = '';
+            LEVELS.forEach((lv, i) => {
+                const dot = document.createElement('div');
+                dot.className = `level-dot ${i === currentLevelIdx ? 'active' : ''} ${completedLevels.includes(i) ? 'completed' : ''}`;
+                dot.onclick = () => {
+                    if(!p1Executing && !p2Executing) loadLevel(i);
+                };
+                container.appendChild(dot);
+            });
+        }
+
+        function initGrids() {
+            renderGrid('p1-grid');
+            renderGrid('p2-grid');
+        }
+
+        function renderGrid(gridId) {
+            const el = document.getElementById(gridId);
+            const level = LEVELS[currentLevelIdx];
+            const playerNum = gridId === 'p1-grid' ? 1 : 2;
+            const pos = playerNum === 1 ? p1Pos : p2Pos;
+            const color = playerNum === 1 ? '#00f2ff' : '#ff00e5';
+
+            el.style.gridTemplateColumns = `repeat(${level.size}, 1fr)`;
+            el.innerHTML = '';
+
+            for (let y = 0; y < level.size; y++) {
+                for (let x = 0; x < level.size; x++) {
+                    const cell = document.createElement('div');
+                    cell.className = 'grid-cell flex items-center justify-center';
+                    
+                    if (x === level.goal.x && y === level.goal.y) {
+                        cell.innerHTML = `<div class="goal-node w-full h-full flex items-center justify-center">CORE</div>`;
+                    }
+                    
+                    if (level.obs.some(o => o.x === x && o.y === y)) {
+                        cell.innerHTML = `<div class="firewall-label w-full h-full flex items-center justify-center">FIREWALL</div>`;
+                    }
+
+                    if (pos.x === x && pos.y === y) {
+                        cell.innerHTML = `
+                        <svg viewBox="0 0 100 100" class="robot">
+                            <rect x="25" y="25" width="50" height="40" rx="4" fill="${color}" />
+                            <rect x="32" y="32" width="36" height="20" rx="2" fill="#000" />
+                            <rect x="38" y="38" width="8" height="8" fill="#fff" />
+                            <rect x="54" y="38" width="8" height="8" fill="#fff" />
+                            <rect x="35" y="70" width="30" height="20" rx="2" fill="${color}" />
+                        </svg>`;
+                    }
+                    el.appendChild(cell);
+                }
+            }
+        }
+
+        function addCommand(player, dir) {
+            const isExec = player === 1 ? p1Executing : p2Executing;
+            if (isExec) return;
+            const cmds = player === 1 ? p1Commands : p2Commands;
+            if (cmds.length >= 24) return;
+            cmds.push(dir);
+            updateCommandUI(player);
+        }
+
+        function updateCommandUI(p) {
+            const container = document.getElementById(`p${p}-commands`);
+            const cmds = p === 1 ? p1Commands : p2Commands;
+            container.innerHTML = '';
+            cmds.forEach((cmd, i) => {
+                const btn = document.createElement('div');
+                btn.className = `${p === 1 ? 'btn-p1' : 'btn-p2'} command-slot text-[10px] cursor-pointer`;
+                btn.innerText = cmd === 'UP' ? '↑' : cmd === 'DOWN' ? '↓' : cmd === 'LEFT' ? '←' : '→';
+                btn.onclick = () => { 
+                    const isExec = p === 1 ? p1Executing : p2Executing;
+                    if(!isExec) { cmds.splice(i, 1); updateCommandUI(p); } 
+                };
+                container.appendChild(btn);
+            });
+        }
+
+        function resetStatus(p) {
+            const el = document.getElementById(`p${p}-status`);
+            el.innerText = 'IDLE_WAITING_COMMAND';
+            el.classList.remove('text-red-500', 'text-green-500');
+        }
+
+        function resetCommands(p) {
+            const isExec = p === 1 ? p1Executing : p2Executing;
+            if(isExec) return;
+            
+            if(p === 1) {
+                p1Commands = [];
+                p1Pos = { ...LEVELS[currentLevelIdx].start };
+            } else {
+                p2Commands = [];
+                p2Pos = { ...LEVELS[currentLevelIdx].start };
+            }
+            updateCommandUI(p);
+            renderGrid(`p${p}-grid`);
+            resetStatus(p);
+        }
+
+        async function runPlayerAlgorithm(p) {
+            const isExec = p === 1 ? p1Executing : p2Executing;
+            if (isExec) return;
+            
+            if(p === 1) p1Executing = true; else p2Executing = true;
+            
+            const btn = document.getElementById(`run-btn-${p}`);
+            btn.classList.add('opacity-50', 'pointer-events-none');
+            resetStatus(p);
+
+            const level = LEVELS[currentLevelIdx];
+            const cmds = [...(p === 1 ? p1Commands : p2Commands)];
+            
+            if(p === 1) p1Pos = { ...level.start }; else p2Pos = { ...level.start };
+            renderGrid(`p${p}-grid`);
+
+            let currentPos = { ...level.start };
+            let success = false;
+            let stepsTaken = 0;
+
+            for (let i = 0; i < cmds.length; i++) {
+                currentPos = move(currentPos, cmds[i]);
+                stepsTaken++;
+                
+                if(p === 1) p1Pos = currentPos; else p2Pos = currentPos;
+                renderGrid(`p${p}-grid`);
+
+                if (checkCrash(currentPos)) {
+                    document.getElementById(`p${p}-status`).innerText = 'ERROR: COLLISION_DETECTED';
+                    document.getElementById(`p${p}-status`).classList.add('text-red-500');
+                    break;
+                } else if (checkWin(currentPos)) {
+                    success = true;
+                    document.getElementById(`p${p}-status`).innerText = 'SUCCESS: CORE_ACCESSED';
+                    document.getElementById(`p${p}-status`).classList.add('text-green-500');
+                    break;
+                }
+                await new Promise(r => setTimeout(r, 400));
+            }
+
+            if (success) {
+                // Hitung Skor
+                const baseScore = 100;
+                const efficiencyBonus = Math.max(0, (25 - stepsTaken) * 5);
+                const totalLevelPoints = baseScore + efficiencyBonus;
+
+                const levelKey = `${currentLevelIdx}_p${p}`;
+                if (!levelWinners[levelKey]) {
+                    if (p === 1) {
+                        p1Score += totalLevelPoints;
+                        document.getElementById('p1-score-display').innerText = p1Score;
+                    } else {
+                        p2Score += totalLevelPoints;
+                        document.getElementById('p2-score-display').innerText = p2Score;
+                    }
+                    levelWinners[levelKey] = true;
+                }
+
+                if (!completedLevels.includes(currentLevelIdx)) {
+                    completedLevels.push(currentLevelIdx);
+                }
+                updateLevelDots();
+                
+                if (currentLevelIdx < LEVELS.length - 1) {
+                    document.getElementById('next-btn').classList.remove('hidden');
+                } else {
+                    document.getElementById(`p${p}-status`).innerText = 'FINAL MISSION COMPLETE!';
+                }
+            }
+
+            if(p === 1) p1Executing = false; else p2Executing = false;
+            btn.classList.remove('opacity-50', 'pointer-events-none');
+        }
+
+        function move(pos, dir) {
+            const n = { ...pos };
+            if (dir === 'UP') n.y--;
+            if (dir === 'DOWN') n.y++;
+            if (dir === 'LEFT') n.x--;
+            if (dir === 'RIGHT') n.x++;
+            return n;
+        }
+
+        function checkCrash(pos) {
+            const level = LEVELS[currentLevelIdx];
+            if (pos.x < 0 || pos.x >= level.size || pos.y < 0 || pos.y >= level.size) return true;
+            return level.obs.some(o => o.x === pos.x && o.y === pos.y);
+        }
+
+        function checkWin(pos) {
+            return pos.x === LEVELS[currentLevelIdx].goal.x && pos.y === LEVELS[currentLevelIdx].goal.y;
+        }
+
+        function nextLevel() {
+            if (currentLevelIdx < LEVELS.length - 1) {
+                loadLevel(currentLevelIdx + 1);
+            }
+        }
+    </script>
+</body>
+</html>
